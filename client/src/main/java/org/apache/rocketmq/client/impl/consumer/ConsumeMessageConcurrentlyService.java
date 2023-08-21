@@ -286,7 +286,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                             msg.getQueueId(), msg.getQueueOffset());
                         continue;
                     }
-                    boolean result = this.sendMessageBack(msg, context);
+                    boolean result = this.sendMessageBack(msg, context); // 消费失败的消息会重试
                     if (!result) {
                         msg.setReconsumeTimes(msg.getReconsumeTimes() + 1);
                         msgBackFailed.add(msg);

@@ -243,7 +243,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     }
 
     public void pullMessage(final PullRequest pullRequest) {
-        final ProcessQueue processQueue = pullRequest.getProcessQueue();
+        final ProcessQueue processQueue = pullRequest.getProcessQueue(); // ProcessQueue是MessageQueue在消费端的重现、快照。PullMessageService从消息服务器默认每次拉取32条消息，按消息队列偏移量的顺序存放在ProcessQueue中
         if (processQueue.isDropped()) {
             log.info("the pull request[{}] is dropped.", pullRequest.toString());
             return;
@@ -268,7 +268,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         long cachedMessageCount = processQueue.getMsgCount().get();
         long cachedMessageSizeInMiB = processQueue.getMsgSize().get() / (1024 * 1024);
 
-        if (cachedMessageCount > this.defaultMQPushConsumer.getPullThresholdForQueue()) {
+        if (cachedMessageCount > this.defaultMQPushConsumer.getPullThresholdForQueue()) { // 队列级别的流量控制阈值，每个消息队列默认最多缓存 1000 条消
             this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_CACHE_FLOW_CONTROL);
             if ((queueFlowControlTimes++ % 1000) == 0) {
                 log.warn(
@@ -304,7 +304,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 if (!pullRequest.isPreviouslyLocked()) {
                     long offset = -1L;
                     try {
-                        offset = this.rebalanceImpl.computePullFromWhereWithException(pullRequest.getMessageQueue());
+                        offset = this.rebalanceImpl.computePullFromWhereWithException(pullRequest.getMessageQueue()); // 根据ConsumeFromWhere计算队列的拉取位置
                         if (offset < 0) {
                             throw new MQClientException(ResponseCode.SYSTEM_ERROR, "Unexpected offset " + offset);
                         }
@@ -313,7 +313,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                         log.error("Failed to compute pull offset, pullResult: {}", pullRequest, e);
                         return;
                     }
-                    boolean brokerBusy = offset < pullRequest.getNextOffset();
+                    boolean brokerBusy = offset < pullRequest.getNextOffset(); // 如果服务端消费位置 《 拉取的的位置，则修复
                     log.info("the first time to pull message, so fix offset from broker. pullRequest: {} NewOffset: {} brokerBusy: {}",
                         pullRequest, offset, brokerBusy);
                     if (brokerBusy) {
