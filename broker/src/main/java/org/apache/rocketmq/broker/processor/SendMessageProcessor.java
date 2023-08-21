@@ -289,7 +289,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 
         // Map<String, String> oriProps = MessageDecoder.string2messageProperties(requestHeader.getProperties());
-        String traFlag = oriProps.get(MessageConst.PROPERTY_TRANSACTION_PREPARED);
+        String traFlag = oriProps.get(MessageConst.PROPERTY_TRANSACTION_PREPARED); // 事务消息标识
         boolean sendTransactionPrepareMessage = false;
         if (Boolean.parseBoolean(traFlag)
             && !(msgInner.getReconsumeTimes() > 0 && msgInner.getDelayTimeLevel() > 0)) { //For client under version 4.6.1

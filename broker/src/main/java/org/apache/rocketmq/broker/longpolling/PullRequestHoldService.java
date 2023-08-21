@@ -128,13 +128,13 @@ public class PullRequestHoldService extends ServiceThread {
             if (requestList != null) {
                 List<PullRequest> replayList = new ArrayList<>();
 
-                for (PullRequest request : requestList) {
+                for (PullRequest request : requestList) { // 遍历消费者队列文件
                     long newestOffset = maxOffset;
                     if (newestOffset <= request.getPullFromThisOffset()) {
                         newestOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId);
                     }
 
-                    if (newestOffset > request.getPullFromThisOffset()) {
+                    if (newestOffset > request.getPullFromThisOffset()) {// 找到合适的队列去写
                         boolean match = request.getMessageFilter().isMatchedByConsumeQueue(tagsCode,
                             new ConsumeQueueExt.CqExtUnit(tagsCode, msgStoreTime, filterBitMap));
                         // match by bit map, need eval again when properties is not null.

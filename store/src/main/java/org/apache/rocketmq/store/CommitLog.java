@@ -828,7 +828,7 @@ public class CommitLog implements Swappable {
         }
 
         // Set the message body CRC (consider the most appropriate setting on the client)
-        msg.setBodyCRC(UtilAll.crc32(msg.getBody()));
+        msg.setBodyCRC(UtilAll.crc32(msg.getBody()));// 消息CRC32编码
         // Back to Results
         AppendMessageResult result = null;
 
@@ -837,7 +837,7 @@ public class CommitLog implements Swappable {
         String topic = msg.getTopic();
         msg.setVersion(MessageVersion.MESSAGE_VERSION_V1);
         boolean autoMessageVersionOnTopicLen =
-            this.defaultMessageStore.getMessageStoreConfig().isAutoMessageVersionOnTopicLen();
+            this.defaultMessageStore.getMessageStoreConfig().isAutoMessageVersionOnTopicLen(); // 如果主题长度127，则自动使用V2版本，需开启配置
         if (autoMessageVersionOnTopicLen && topic.length() > Byte.MAX_VALUE) {
             msg.setVersion(MessageVersion.MESSAGE_VERSION_V2);
         }
@@ -857,19 +857,19 @@ public class CommitLog implements Swappable {
         String topicQueueKey = generateKey(putMessageThreadLocal.getKeyBuilder(), msg);
         long elapsedTimeInLock = 0;
         MappedFile unlockMappedFile = null;
-        MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
+        MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();// MappedFileQueue是MappedFile的管理容器，MappedFileQueue对存储目录进行封装,MappedFile映射一个文件
 
         long currOffset;
         if (mappedFile == null) {
             currOffset = 0;
         } else {
-            currOffset = mappedFile.getFileFromOffset() + mappedFile.getWrotePosition();
+            currOffset = mappedFile.getFileFromOffset() + mappedFile.getWrotePosition(); // 文件名偏移取值和文件写的位置
         }
 
-        int needAckNums = this.defaultMessageStore.getMessageStoreConfig().getInSyncReplicas();
+        int needAckNums = this.defaultMessageStore.getMessageStoreConfig().getInSyncReplicas();// 什么时候消息算写入成功，确认次数配置，同步模式下，至少写入一个副本才算成功
         boolean needHandleHA = needHandleHA(msg);
 
-        if (needHandleHA && this.defaultMessageStore.getBrokerConfig().isEnableControllerMode()) {
+        if (needHandleHA && this.defaultMessageStore.getBrokerConfig().isEnableControllerMode()) { // 如果启动了高可用和主从切换，则需要等待副本确认的同步状态ACK
             if (this.defaultMessageStore.getHaService().inSyncReplicasNums(currOffset) < this.defaultMessageStore.getMessageStoreConfig().getMinInSyncReplicas()) {
                 return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.IN_SYNC_REPLICAS_NOT_ENOUGH, null));
             }
@@ -877,7 +877,7 @@ public class CommitLog implements Swappable {
                 // -1 means all ack in SyncStateSet
                 needAckNums = MixAll.ALL_ACK_IN_SYNC_STATE_SET;
             }
-        } else if (needHandleHA && this.defaultMessageStore.getBrokerConfig().isEnableSlaveActingMaster()) {
+        } else if (needHandleHA && this.defaultMessageStore.getBrokerConfig().isEnableSlaveActingMaster()) {// 主从
             int inSyncReplicas = Math.min(this.defaultMessageStore.getAliveReplicaNumInGroup(),
                 this.defaultMessageStore.getHaService().inSyncReplicasNums(currOffset));
             needAckNums = calcNeedAckNums(inSyncReplicas);
@@ -887,7 +887,7 @@ public class CommitLog implements Swappable {
             }
         }
 
-        topicQueueLock.lock(topicQueueKey);
+        topicQueueLock.lock(topicQueueKey); // 写的时候锁定队列
         try {
 
             boolean needAssignOffset = true;
@@ -899,14 +899,14 @@ public class CommitLog implements Swappable {
                 defaultMessageStore.assignOffset(msg);
             }
 
-            PutMessageResult encodeResult = putMessageThreadLocal.getEncoder().encode(msg);
+            PutMessageResult encodeResult = putMessageThreadLocal.getEncoder().encode(msg); // 将消息组成MQ设计的格式，放到编码器的字节Buffer里
             if (encodeResult != null) {
                 return CompletableFuture.completedFuture(encodeResult);
             }
             msg.setEncodedBuff(putMessageThreadLocal.getEncoder().getEncoderBuffer());
             PutMessageContext putMessageContext = new PutMessageContext(topicQueueKey);
 
-            putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
+            putMessageLock.lock(); //spin or ReentrantLock ,depending on store config // 写消息的时候加锁
             try {
                 long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
                 this.beginTimeInLock = beginLockTimestamp;
@@ -929,7 +929,7 @@ public class CommitLog implements Swappable {
                     return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.CREATE_MAPPED_FILE_FAILED, null));
                 }
 
-                result = mappedFile.appendMessage(msg, this.appendMessageCallback, putMessageContext);
+                result = mappedFile.appendMessage(msg, this.appendMessageCallback, putMessageContext); // 向文件追加消息
                 switch (result.getStatus()) {
                     case PUT_OK:
                         onCommitLogAppend(msg, result, mappedFile);
@@ -991,7 +991,7 @@ public class CommitLog implements Swappable {
         // Statistics
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).add(result.getMsgNum());
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).add(result.getWroteBytes());
-
+        // 前面那些只是把消息写到PageCache缓存内，下面的方法是执行刷盘，将数据写到磁盘中
         return handleDiskFlushAndHA(putMessageResult, msg, needAckNums, needHandleHA);
     }
 

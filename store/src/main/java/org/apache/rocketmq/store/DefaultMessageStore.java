@@ -550,7 +550,7 @@ public class DefaultMessageStore implements MessageStore {
     public CompletableFuture<PutMessageResult> asyncPutMessage(MessageExtBrokerInner msg) {
 
         for (PutMessageHook putMessageHook : putMessageHookList) {
-            PutMessageResult handleResult = putMessageHook.executeBeforePutMessage(msg);
+            PutMessageResult handleResult = putMessageHook.executeBeforePutMessage(msg); // 消息校验和消息转换，延时消息会在这里转换
             if (handleResult != null) {
                 return CompletableFuture.completedFuture(handleResult);
             }
@@ -2064,7 +2064,7 @@ public class DefaultMessageStore implements MessageStore {
     public void onCommitLogDispatch(DispatchRequest dispatchRequest, boolean doDispatch, MappedFile commitLogFile,
         boolean isRecover, boolean isFileEnd) {
         if (doDispatch && !isFileEnd) {
-            this.doDispatch(dispatchRequest);
+            this.doDispatch(dispatchRequest); // 消息分发，当事务回滚或者Half预消息的时候不会分发消息，主要是写ComsumeLog 和 IndexLog
         }
     }
 

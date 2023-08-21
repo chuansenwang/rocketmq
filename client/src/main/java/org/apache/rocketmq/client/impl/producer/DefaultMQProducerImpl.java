@@ -330,7 +330,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
             @Override
             public void run() {
-                TransactionCheckListener transactionCheckListener = DefaultMQProducerImpl.this.checkListener();
+                TransactionCheckListener transactionCheckListener = DefaultMQProducerImpl.this.checkListener(); // 获取事务消息监听器
                 TransactionListener transactionListener = getCheckListener();
                 if (transactionCheckListener != null || transactionListener != null) {
                     LocalTransactionState localTransactionState = LocalTransactionState.UNKNOW;
@@ -393,11 +393,11 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 if (exception != null) {
                     remark = "checkLocalTransactionState Exception: " + UtilAll.exceptionSimpleDesc(exception);
                 }
-                doExecuteEndTransactionHook(msg, uniqueKey, brokerAddr, localTransactionState, true);
+                doExecuteEndTransactionHook(msg, uniqueKey, brokerAddr, localTransactionState, true); // 事务执行完成后回调
 
                 try {
                     DefaultMQProducerImpl.this.mQClientFactory.getMQClientAPIImpl().endTransactionOneway(brokerAddr, thisHeader, remark,
-                        3000);
+                        3000); // 生产者报告事务状态
                 } catch (Exception e) {
                     log.error("endTransactionOneway exception", e);
                 }

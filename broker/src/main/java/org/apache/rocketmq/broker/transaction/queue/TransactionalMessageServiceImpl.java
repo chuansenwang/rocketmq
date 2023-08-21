@@ -145,7 +145,7 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
         AbstractTransactionalMessageCheckListener listener) {
         try {
             String topic = TopicValidator.RMQ_SYS_TRANS_HALF_TOPIC;
-            Set<MessageQueue> msgQueues = transactionalMessageBridge.fetchMessageQueues(topic);
+            Set<MessageQueue> msgQueues = transactionalMessageBridge.fetchMessageQueues(topic); // 获取事务Topic 所有的队列文件
             if (msgQueues == null || msgQueues.size() == 0) {
                 log.warn("The queue of topic is empty :" + topic);
                 return;
@@ -195,7 +195,7 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                         }
                     } else {
                         GetResult getResult = getHalfMsg(messageQueue, i);
-                        MessageExt msgExt = getResult.getMsg();
+                        MessageExt msgExt = getResult.getMsg();  // 获取事务消息
                         if (msgExt == null) {
                             if (getMessageNullCount++ > MAX_RETRY_COUNT_WHEN_HALF_NULL) {
                                 break;
@@ -288,7 +288,7 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                                     msgExt.getUserProperty(MessageConst.PROPERTY_REAL_TOPIC),
                                     msgExt.getUserProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX),
                                     msgExt.getQueueOffset(), msgExt.getCommitLogOffset());
-                            listener.resolveHalfMsg(msgExt);
+                            listener.resolveHalfMsg(msgExt); // 调用生产者校验事务消息的结果
                         } else {
                             nextOpOffset = pullResult != null ? pullResult.getNextBeginOffset() : nextOpOffset;
                             pullResult = fillOpRemoveMap(removeMap, opQueue, nextOpOffset,
@@ -319,7 +319,7 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                 if (newOpOffset != opOffset) {
                     transactionalMessageBridge.updateConsumeOffset(opQueue, newOpOffset);
                 }
-                GetResult getResult = getHalfMsg(messageQueue, newOffset);
+                GetResult getResult = getHalfMsg(messageQueue, newOffset); // 获取到事务消息
                 pullResult = pullOpMsg(opQueue, newOpOffset, 1);
                 long maxMsgOffset = getResult.getPullResult() == null ? newOffset : getResult.getPullResult().getMaxOffset();
                 long maxOpOffset = pullResult == null ? newOpOffset : pullResult.getMaxOffset();
